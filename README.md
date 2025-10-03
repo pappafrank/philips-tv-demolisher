@@ -20,7 +20,7 @@ A Python script to control Philips TVs on your LAN using the Philips TV HTTP API
 ## Usage
 
 ```bash
-python3 philips_tv_demolisher.py
+sudo chmod +x philips-demolisher; ./philips-demolisher
 ```
 
 Steps:
