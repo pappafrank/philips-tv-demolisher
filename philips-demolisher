@@ -91,7 +91,7 @@ def ambilight_color(ip, r_val, g_val, b_val):
 
 def show_menu():
     print("""
-=== Philips TV Autism Crisis ===
+=== Philips TV Demolisher ===
 1. Power Off (Standby)
 2. Volume Up
 3. Volume Down
