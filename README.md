@@ -46,5 +46,5 @@ Examples:
 
 * Works only on TVs with open API (port 1925)
 * Use only on your own network/devices
-* Some models may require pairing/authentication (Which can be seen at the end of the json available in http://{DEVICE-IP}:1925/1/system as "pairing_type" which is off by default.)
+* Some models may require pairing/authentication (Which can be seen at the end of the json available in http://{DEVICE-IP}:1925/1/system as "pairing_type" which is none by default.)
 <img width="505" height="223" alt="image" src="https://github.com/user-attachments/assets/7cd0ea18-d79c-48a2-b2ff-bc6168baf375" />
